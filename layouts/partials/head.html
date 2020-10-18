@@ -10,12 +10,40 @@
 
   {{ "<!-- plugins -->" | safeHTML }}
   {{ range site.Params.plugins.css }}
-  <link rel="stylesheet" href="{{ .link | absURL }}">
+
+  {{ $css_link := .link }}
+  {{ $css_options := dict "targetPath" $css_link }}
+
+  {{- if (in (slice (getenv "HUGO_ENV") hugo.Environment) "development") -}}
+    {{- $css_options = merge $css_options (dict "outputStyle" "compressed") -}}
+  {{- end -}}
+  
+  {{ $sass_template := resources.Get "scss/style.scss" }}
+  {{ $style := $sass_template | resources.ExecuteAsTemplate "main_parsed.scss" . | toCSS $css_options }}
+  
+  {{- if (eq (getenv "HUGO_ENV") "development") -}}
+    {{- $style = $style | postCSS | minify | fingerprint "md5" -}}
+  {{- end -}}
+
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}">
+
   {{ end }}
 
   {{ "<!-- Main Stylesheet -->" | safeHTML }}
-  {{ $style := resources.Get "scss/style.scss" | toCSS | minify }}
-  <link href="{{ $style.Permalink }}" rel="stylesheet" media="screen"/>
+  {{ $css_options := dict "targetPath" "css/style.css" }}
+
+  {{- if (in (slice (getenv "HUGO_ENV") hugo.Environment) "development") -}}
+    {{- $css_options = merge $css_options (dict "outputStyle" "compressed") -}}
+  {{- end -}}
+  
+  {{ $sass_template := resources.Get "scss/style.scss" }}
+  {{ $style := $sass_template | resources.ExecuteAsTemplate "main_parsed.scss" . | toCSS $css_options }}
+  
+  {{- if (eq (getenv "HUGO_ENV") "development") -}}
+    {{- $style = $style | postCSS | minify | fingerprint "md5" -}}
+  {{- end -}}
+  
+  <link rel="stylesheet" href="{{ $style.RelPermalink }}" media="screen">
 
   {{ "<!--Favicon-->" | safeHTML }}
   <link rel="shortcut icon" href="{{ `images/favicon.png` | absURL }}" type="image/x-icon">
